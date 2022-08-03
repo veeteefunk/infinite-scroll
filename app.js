@@ -1,35 +1,81 @@
-const jokeBtn = document.getElementById('joke-btn');
-const punchBtn = document.getElementById('punch-btn');
-const joke = document.getElementById('joke');
-const punchline = document.getElementById('punchline');
+const postsContainer = document.getElementById('posts-container');
+const loading = document.querySelector('.loader');
+const filter = document.getElementById('filter');
 
-const jokes = [
-    {   joke: "What did the toaster say to the slice of bread?",
-        punchline: "I want you inside me."},
-    {   joke: "I'll admit it, I have a tremendous sex drive.",
-        punchline: "My girlfriend lives forty miles away."},
-    {   joke: "How do you make a pool table laugh?",
-        punchline: "Tickle its balls."},
-    {   joke: "A naked man broke into a church.",
-        punchline: "The police chased him around and finally caught him by the organ."},
-    {   joke: "What do a penis and a Rubik's Cube have in common?",
-        punchline: "The more you play with it, the harder it gets." },
-]
+let limit = 5;
+let page = 1;
 
-let randomNum = 0;
+// fetch posts from API
+async function getPosts() {
+    const res = await fetch(
+    `https://jsonplaceholder.typicode.com/posts?_limit=${limit}&_page=${page}`);
 
-jokeBtn.addEventListener('click', generateJoke);
-punchBtn.addEventListener('click', revealPunchline);
+    const data = await res.json();
 
-function generateJoke() {
-    randomNum = Math.floor(Math.random() * jokes.length);
-    console.log(randomNum);
-    joke.textContent = jokes[randomNum].joke;
-    punchline.style.visibility = "hidden"
+    return data;
 }
 
-function revealPunchline() {
-    punchline.textContent = jokes[randomNum].punchline;
-    punchline.style.visibility = "visible"
-    
+// show posts in DOM
+async function showPosts() {
+    const posts = await getPosts();
+
+    posts.forEach(post => {
+        const postEl = document.createElement('div');
+        postEl.classList.add('post');
+        postEl.innerHTML = `
+            <div class="number">${post.id}</div>
+            <div class="post-info">
+                <h2 class="post-title">${post.title}</h2>
+                <p class="post-body">${post.body}</p>
+            </div>
+        `;
+
+    postsContainer.appendChild(postEl);
+    });
 }
+
+// show loader & fetch more posts
+
+function showLoading() {
+    loading.classList.add('show');
+
+    setTimeout(() => {
+        loading.classList.remove('show');
+
+        setTimeout(() => {
+            page++;
+            showPosts();
+        }, 300);
+    }, 1000);
+}
+
+// filter
+
+function filterPosts(e) {
+    const term = e.target.value.toUpperCase();
+    const posts = document.querySelectorAll('.post');
+
+    posts.forEach(post => {
+        const title = post.querySelector('.post-title').innerText.toUpperCase();
+        const body = post.querySelector('.post-body').innerText.toUpperCase();
+
+        if(title.indexOf(term) > -1 || body.indexOf(term) > -1) {
+            post.style.display = 'flex';
+        } else {
+            post.style.display = 'none';
+        }
+    })
+}
+
+showPosts();
+
+window.addEventListener('scroll', () => {
+    const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
+
+    if(scrollTop + clientHeight >= scrollHeight - 5) {
+        showLoading();
+    }
+});
+
+filter.addEventListener('input', filterPosts);
+
